@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useI18n } from "@/components/I18nProvider";
-import { getBrowserClient } from "@/lib/supabase/browser";
 import { formatDuration } from "@/lib/pigeon";
 
 const MAX_TIMEOUT_MS = 2 ** 31 - 1; // batas setTimeout (sekitar 24,8 hari)
@@ -101,11 +100,15 @@ export function useMailNotifications({ me, inbox, router, onOpenTrip }) {
   }, [inbox, notify, t, who, animalName, locale]);
 
   // Langganan Realtime; polling jarang sebagai cadangan jika koneksi terputus.
+  // Klien Supabase (sekitar 70 kB) dimuat terpisah setelah halaman tampil, supaya tidak memperlambat muat awal.
   useEffect(() => {
-    const supabase = getBrowserClient();
+    let supabase;
     let channel;
     let cancelled = false;
     (async () => {
+      const { getBrowserClient } = await import("@/lib/supabase/browser");
+      if (cancelled) return;
+      supabase = getBrowserClient();
       const {
         data: { session },
       } = await supabase.auth.getSession();
@@ -127,7 +130,7 @@ export function useMailNotifications({ me, inbox, router, onOpenTrip }) {
     return () => {
       cancelled = true;
       clearInterval(poll);
-      if (channel) supabase.removeChannel(channel);
+      if (channel) supabase?.removeChannel(channel);
     };
   }, [me.id, router]);
 

@@ -1,5 +1,4 @@
 import { DM_Sans } from "next/font/google";
-import { I18nProvider } from "@/components/I18nProvider";
 import { BRAND } from "@/lib/brand";
 import { getT } from "@/lib/i18n-server";
 import "./globals.css";
@@ -21,9 +20,7 @@ export default async function RootLayout({ children }) {
   const { locale } = await getT();
   return (
     <html lang={locale} className={dmSans.variable}>
-      <body>
-        <I18nProvider locale={locale}>{children}</I18nProvider>
-      </body>
+      <body>{children}</body>
     </html>
   );
 }

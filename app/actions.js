@@ -221,34 +221,6 @@ export async function deleteMessage(id) {
   return { ok: true };
 }
 
-function sanitizeQuery(raw) {
-  return String(raw ?? "")
-    .toLowerCase()
-    .replace(/^@/, "")
-    .replace(/[^\p{L}\p{N} _]/gu, "")
-    .trim()
-    .slice(0, 30);
-}
-
-// Saran penerima: cocokkan awal username atau bagian nama tampilan.
-export async function searchProfiles(rawQuery) {
-  const { supabase, user } = await currentUser();
-  if (!user) return { error: "sessionExpired" };
-  const q = sanitizeQuery(rawQuery).replace(/_/g, "\\_");
-  if (!q) return { results: [] };
-
-  const { data } = await supabase
-    .from("profiles")
-    .select("id, username, display_name, address_label")
-    .or(`username.ilike.${q}%,display_name.ilike.%${q}%`)
-    .neq("id", user.id)
-    .order("username")
-    .limit(6);
-  return {
-    results: (data ?? []).map((p) => ({ id: p.id, username: p.username, displayName: p.display_name, label: p.address_label })),
-  };
-}
-
 export async function loadMoreTrips(box, before) {
   const { supabase, user } = await currentUser();
   if (!user) return { error: "sessionExpired" };

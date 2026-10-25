@@ -1,46 +1,29 @@
 "use client";
 
-import { useEffect, useId, useMemo, useState } from "react";
-import { searchProfiles } from "@/app/actions";
+import { useId, useMemo, useState } from "react";
 import { useI18n } from "@/components/I18nProvider";
 
-const SEARCH_DELAY_MS = 250;
+const MAX_SUGGESTIONS = 6;
 
-// Kolom @username dengan saran: kontak (dari riwayat surat) lalu pengguna lain dari server.
+// Kolom @username. Saran hanya dari kontak (orang yang pernah berkirim surat dengan kita),
+// supaya daftar pengguna tidak bisa ditelusuri. Penerima baru tetap bisa diketik lengkap.
 export default function RecipientInput({ value, onChange, contacts, readOnly, describedBy, invalid }) {
   const { t } = useI18n();
   const listId = useId();
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(-1);
-  const [remote, setRemote] = useState([]);
   const query = value.trim().toLowerCase().replace(/^@/, "");
 
-  const contactMatches = useMemo(() => {
-    const list = contacts.filter(
-      (c) => !query || c.username.startsWith(query) || c.displayName.toLowerCase().includes(query),
-    );
-    return list.slice(0, 5);
-  }, [contacts, query]);
-
-  useEffect(() => {
-    if (readOnly || !open || !query) return setRemote([]);
-    let cancelled = false;
-    const id = setTimeout(async () => {
-      const res = await searchProfiles(query);
-      if (!cancelled) setRemote(res.results ?? []);
-    }, SEARCH_DELAY_MS);
-    return () => {
-      cancelled = true;
-      clearTimeout(id);
-    };
-  }, [query, open, readOnly]);
-
-  const known = new Set(contactMatches.map((c) => c.username));
-  const others = remote.filter((r) => !known.has(r.username));
-  const options = [...contactMatches.map((c) => ({ ...c, group: "contacts" })), ...others.map((r) => ({ ...r, group: "people" }))];
-  // Sembunyikan jika satu-satunya saran sama persis dengan yang sudah diketik.
+  const options = useMemo(
+    () =>
+      contacts
+        .filter((c) => !query || c.username.startsWith(query) || c.displayName.toLowerCase().includes(query))
+        .slice(0, MAX_SUGGESTIONS),
+    [contacts, query],
+  );
+  // Sembunyikan jika tidak ada saran, atau satu-satunya saran sama persis dengan yang sudah diketik.
   const exact = options.length === 1 && options[0].username === query;
-  const showList = open && !readOnly && !exact && (options.length > 0 || query.length >= 2);
+  const showList = open && !readOnly && options.length > 0 && !exact;
 
   function choose(option) {
     onChange(option.username);
@@ -66,8 +49,6 @@ export default function RecipientInput({ value, onChange, contacts, readOnly, de
       setOpen(false);
     }
   }
-
-  let lastGroup = null;
 
   return (
     <div className="combo">
@@ -100,29 +81,23 @@ export default function RecipientInput({ value, onChange, contacts, readOnly, de
         />
       </div>
       {showList && (
-        <ul id={listId} role="listbox" className="combo__list">
-          {options.length === 0 && <li className="combo__empty">{t("mail.noMatches")}</li>}
-          {options.map((o, i) => {
-            const header = o.group !== lastGroup ? (lastGroup = o.group) : null;
-            return (
-              <li key={o.username} role="presentation">
-                {header && <span className="combo__group">{t(header === "contacts" ? "mail.contacts" : "mail.people")}</span>}
-                <div
-                  id={`${listId}-${i}`}
-                  role="option"
-                  aria-selected={i === active}
-                  className="combo__option"
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    choose(o);
-                  }}
-                >
-                  <strong>@{o.username}</strong> <span>{o.displayName}</span>
-                  {o.label && <small>📍 {o.label}</small>}
-                </div>
-              </li>
-            );
-          })}
+        <ul id={listId} role="listbox" aria-label={t("mail.contacts")} className="combo__list">
+          <li role="presentation" className="combo__group">{t("mail.contacts")}</li>
+          {options.map((o, i) => (
+            <li
+              key={o.username}
+              id={`${listId}-${i}`}
+              role="option"
+              aria-selected={i === active}
+              className="combo__option"
+              onMouseDown={(e) => {
+                e.preventDefault();
+                choose(o);
+              }}
+            >
+              <strong>@{o.username}</strong> <span>{o.displayName}</span>
+            </li>
+          ))}
         </ul>
       )}
     </div>

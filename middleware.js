@@ -2,6 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse } from "next/server";
 
 // Memperbarui sesi Supabase di setiap request supaya cookie tidak kedaluwarsa.
+// getClaims() memperbarui token yang hampir habis dan memverifikasinya secara lokal (tanpa panggilan ke server Auth).
 export async function middleware(request) {
   let response = NextResponse.next({ request });
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -21,7 +22,7 @@ export async function middleware(request) {
     },
   });
 
-  await supabase.auth.getUser();
+  await supabase.auth.getClaims();
   return response;
 }
 

@@ -4,9 +4,9 @@ import SetupNotice from "@/components/SetupNotice";
 import SiteHeader from "@/components/SiteHeader";
 import { isSimulationAllowed } from "@/lib/config";
 import { getT } from "@/lib/i18n-server";
-import { fetchBlockedIds, fetchBox } from "@/lib/messages";
+import { fetchBlockedIds, fetchBox, fetchContacts } from "@/lib/messages";
 import { tripFromRow } from "@/lib/pigeon";
-import { getSession } from "@/lib/session";
+import { getAuth, getSession } from "@/lib/session";
 import { hasSupabaseEnv } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -14,15 +14,19 @@ export const dynamic = "force-dynamic";
 export default async function Home({ searchParams }) {
   if (!hasSupabaseEnv()) return <SetupNotice />;
 
-  const { supabase, user, profile } = await getSession();
+  const { supabase, user } = await getAuth();
   if (!user) redirect("/masuk");
-  if (!profile) redirect("/profil");
 
-  const [{ to }, { t }, blockedIds] = await Promise.all([searchParams, getT(), fetchBlockedIds(supabase, user.id)]);
-  const [inbox, sent] = await Promise.all([
-    fetchBox(supabase, user.id, "inbox", { blockedIds }),
+  // Semua query berjalan bersamaan; hanya kotak masuk yang menunggu daftar blokir.
+  const [{ profile }, { to }, { t }, inbox, sent, contacts] = await Promise.all([
+    getSession(),
+    searchParams,
+    getT(),
+    fetchBlockedIds(supabase, user.id).then((blockedIds) => fetchBox(supabase, user.id, "inbox", { blockedIds })),
     fetchBox(supabase, user.id, "sent"),
+    fetchContacts(supabase),
   ]);
+  if (!profile) redirect("/profil");
 
   return (
     <main className="page">
@@ -34,6 +38,7 @@ export default async function Home({ searchParams }) {
         inbox={inbox.rows.map(tripFromRow)}
         sent={sent.rows.map(tripFromRow)}
         hasMore={{ inbox: inbox.hasMore, sent: sent.hasMore }}
+        contacts={contacts}
         me={{
           id: profile.id,
           username: profile.username,

@@ -35,7 +35,7 @@ export default async function PublicProfilePage({ params }) {
   if (!person) notFound();
 
   const isMe = profile?.id === person.id;
-  const since = new Intl.DateTimeFormat(INTL_LOCALE[locale], { month: "long", year: "numeric" }).format(
+  const since = new Intl.DateTimeFormat(INTL_LOCALE, { month: "long", year: "numeric" }).format(
     new Date(person.created_at),
   );
   const writeHref = user ? `/?to=${person.username}` : "/masuk";

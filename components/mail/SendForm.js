@@ -105,20 +105,25 @@ export default function SendForm({ me, contacts, initialTo, replyTo, onCancelRep
         </small>
       </div>
 
-      <fieldset className="animals">
+      <fieldset className="animals" aria-describedby="courier-note">
         <legend>{t("mail.courier")}</legend>
-        {Object.values(ANIMALS).map((a) => (
-          <label key={a.id} className="animal-option">
-            <input type="radio" name="animal" value={a.id} checked={animalId === a.id} onChange={() => setAnimalId(a.id)} />
-            <span className="animal-option__emoji" aria-hidden="true">{a.emoji}</span>
-            <span className="animal-option__text">
-              <strong>{t(`animals.${a.id}.name`)}</strong>
-              <small>
-                {a.kmh.toLocaleString(intl)} {t("mail.kmh")} · {t(`animals.${a.id}.note`)}
-              </small>
-            </span>
-          </label>
-        ))}
+        <div className="animals__grid">
+          {Object.values(ANIMALS).map((a) => (
+            <label key={a.id} className="animal-option">
+              <input type="radio" name="animal" value={a.id} checked={animalId === a.id} onChange={() => setAnimalId(a.id)} />
+              <span className="animal-option__emoji" aria-hidden="true">{a.emoji}</span>
+              <span className="animal-option__text">
+                <strong>{t(`animals.${a.id}.name`)}</strong>
+                <small>
+                  {a.kmh.toLocaleString(intl)} {t("mail.kmh")}
+                </small>
+              </span>
+            </label>
+          ))}
+        </div>
+        <p id="courier-note" className="hint courier-note">
+          <span aria-hidden="true">{animal.emoji}</span> {t(`animals.${animalId}.note`)}
+        </p>
       </fieldset>
 
       {allowSimulation && (

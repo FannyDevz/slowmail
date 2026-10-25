@@ -4,7 +4,7 @@ import SetupNotice from "@/components/SetupNotice";
 import SiteHeader from "@/components/SiteHeader";
 import { BRAND } from "@/lib/brand";
 import { getT } from "@/lib/i18n-server";
-import { getSession } from "@/lib/session";
+import { getAuth, getSession } from "@/lib/session";
 import { hasSupabaseEnv } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -16,15 +16,18 @@ export async function generateMetadata() {
 
 export default async function SettingsPage() {
   if (!hasSupabaseEnv()) return <SetupNotice />;
-  const { supabase, user, profile } = await getSession();
+  const { supabase, user } = await getAuth();
   if (!user) redirect("/masuk");
-  const { t } = await getT();
 
-  const { data: blocks } = await supabase
-    .from("blocks")
-    .select("blocked_id, blocked:profiles!blocks_blocked_id_fkey(username, display_name)")
-    .eq("blocker_id", user.id)
-    .order("created_at", { ascending: false });
+  const [{ profile }, { t }, { data: blocks }] = await Promise.all([
+    getSession(),
+    getT(),
+    supabase
+      .from("blocks")
+      .select("blocked_id, blocked:profiles!blocks_blocked_id_fkey(username, display_name)")
+      .eq("blocker_id", user.id)
+      .order("created_at", { ascending: false }),
+  ]);
 
   return (
     <main className="page page--medium">

@@ -4,7 +4,7 @@ import SetupNotice from "@/components/SetupNotice";
 import SiteHeader from "@/components/SiteHeader";
 import { BRAND } from "@/lib/brand";
 import { getT } from "@/lib/i18n-server";
-import { getSession } from "@/lib/session";
+import { getAuth } from "@/lib/session";
 import { hasSupabaseEnv } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -16,7 +16,7 @@ export async function generateMetadata() {
 
 export default async function LoginPage() {
   if (!hasSupabaseEnv()) return <SetupNotice />;
-  const { user } = await getSession();
+  const { user } = await getAuth();
   if (user) redirect("/");
   const { t } = await getT();
 

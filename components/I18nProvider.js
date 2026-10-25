@@ -1,15 +1,10 @@
 "use client";
 
-import { createContext, useContext, useMemo } from "react";
-import { INTL_LOCALE, makeT } from "@/lib/i18n";
+import { INTL_LOCALE, LOCALE, t } from "@/lib/i18n";
 
-const I18nContext = createContext(null);
+const value = { locale: LOCALE, intl: INTL_LOCALE, t };
 
-export function I18nProvider({ locale, children }) {
-  const value = useMemo(() => ({ locale, intl: INTL_LOCALE[locale], t: makeT(locale) }), [locale]);
-  return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>;
-}
-
+// Satu bahasa, jadi tidak perlu context; hook ini tetap ada supaya komponen tidak perlu berubah.
 export function useI18n() {
-  return useContext(I18nContext);
+  return value;
 }

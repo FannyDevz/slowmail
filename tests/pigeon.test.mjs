@@ -71,12 +71,9 @@ test("tripFromRow mengubah baris database menjadi perjalanan", () => {
 });
 
 describe("formatDuration", () => {
-  test("bahasa Indonesia", () => {
-    assert.equal(formatDuration(26 * 3600000, "id"), "1 hari 2 jam");
-    assert.equal(formatDuration(65000, "id"), "1 menit 5 detik");
-  });
-  test("bahasa Inggris memakai bentuk jamak", () => {
-    assert.equal(formatDuration(26 * 3600000, "en"), "1 day 2 hours");
-    assert.equal(formatDuration(2 * 86400000, "en"), "2 days");
+  test("memakai bentuk tunggal dan jamak", () => {
+    assert.equal(formatDuration(26 * 3600000), "1 day 2 hours");
+    assert.equal(formatDuration(2 * 86400000), "2 days");
+    assert.equal(formatDuration(65000), "1 minute 5 seconds");
   });
 });

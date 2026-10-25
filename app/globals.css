@@ -165,32 +165,6 @@ code {
   gap: 0.75rem 1.25rem;
 }
 
-.lang-switch {
-  display: flex;
-  border: var(--border-width) solid var(--border);
-  border-radius: var(--radius);
-  overflow: hidden;
-}
-
-.lang-switch button {
-  font: inherit;
-  font-size: 0.8rem;
-  font-weight: 800;
-  color: var(--fg);
-  background: var(--surface);
-  border: 0;
-  padding: 0.25rem 0.55rem;
-  cursor: pointer;
-}
-
-.lang-switch button + button {
-  border-left: var(--border-width) solid var(--border);
-}
-
-.lang-switch button[aria-pressed="true"] {
-  background: var(--yellow);
-}
-
 .site-nav {
   display: flex;
   flex-wrap: wrap;
@@ -469,6 +443,17 @@ textarea {
   padding: 0;
   display: grid;
   gap: 0.5rem;
+  min-width: 0;
+}
+
+.animals__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 0.5rem;
+}
+
+.courier-note {
+  margin: 0.1rem 0 0;
 }
 
 .animals legend {
@@ -478,9 +463,10 @@ textarea {
 
 .animal-option {
   display: flex;
-  gap: 0.75rem;
+  gap: 0.6rem;
   align-items: center;
-  padding: 0.55rem 0.75rem;
+  min-width: 0;
+  padding: 0.45rem 0.55rem;
   font-weight: 500;
   background: var(--surface);
   border: var(--border-width) solid var(--border);
@@ -516,8 +502,8 @@ textarea {
 .animal-option__emoji {
   display: grid;
   place-items: center;
-  width: 2.4rem;
-  height: 2.4rem;
+  width: 2.1rem;
+  height: 2.1rem;
   flex: none;
   font-size: 1.4rem;
   background: var(--bg);
@@ -527,6 +513,8 @@ textarea {
 
 .animal-option__text {
   display: grid;
+  min-width: 0;
+  line-height: 1.25;
 }
 
 .animal-option__text small {
@@ -1242,9 +1230,9 @@ h3 {
 }
 
 .combo__option {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 0 0.4rem;
+  display: flex;
+  gap: 0.4rem;
+  min-width: 0;
   padding: 0.45rem 0.75rem;
   cursor: pointer;
 }
@@ -1256,20 +1244,9 @@ h3 {
   white-space: nowrap;
 }
 
-.combo__option small {
-  grid-column: 1 / -1;
-  font-size: 0.8rem;
-  color: var(--mute);
-}
-
 .combo__option[aria-selected="true"],
 .combo__option:hover {
   background: var(--yellow);
-}
-
-.combo__empty {
-  padding: 0.5rem 0.75rem;
-  color: var(--mute);
 }
 
 /* Percakapan */
@@ -1417,6 +1394,194 @@ h3 {
   box-shadow: var(--shadow);
 }
 
+/* Voyager (super admin) */
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1rem;
+  margin: 0 0 1.5rem;
+}
+
+.stats div {
+  padding: 0.85rem 1rem;
+  background: var(--surface);
+  border: var(--border-width) solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+.stats div:nth-child(4) {
+  background: var(--yellow);
+}
+
+.stats dt {
+  font-size: 0.85rem;
+  color: var(--mute);
+}
+
+.stats div:nth-child(4) dt {
+  color: var(--fg);
+}
+
+.stats dd {
+  margin: 0;
+  font-size: 1.8rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.segmented a {
+  flex: 1;
+  padding: 0.55rem 0.75rem;
+  font-weight: 700;
+  text-align: center;
+  text-decoration: none;
+  background: var(--surface);
+}
+
+.segmented a + a {
+  border-left: var(--border-width) solid var(--border);
+}
+
+.segmented a[aria-current="page"] {
+  background: var(--main);
+}
+
+.admin-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.admin-filters input {
+  flex: 1 1 240px;
+  min-width: 0;
+}
+
+.admin-filters select {
+  width: auto;
+  flex: 0 1 180px;
+}
+
+/* Tabel boleh digulir ke samping di dalam kartu, halamannya tidak. */
+.table-wrap {
+  overflow-x: auto;
+  border: var(--border-width) solid var(--border);
+  border-radius: var(--radius);
+}
+
+.admin-table {
+  width: 100%;
+  min-width: 760px;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.admin-table th,
+.admin-table td {
+  padding: 0.6rem 0.75rem;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: var(--border-width) solid var(--border);
+}
+
+.admin-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.admin-table th {
+  font-size: 0.8rem;
+  font-weight: 800;
+  background: var(--bg);
+  white-space: nowrap;
+}
+
+.admin-table td small {
+  display: block;
+  color: var(--mute);
+  font-size: 0.8rem;
+}
+
+.admin-table td .tag {
+  margin: 0.25rem 0 0;
+}
+
+.admin-table__email {
+  overflow-wrap: anywhere;
+}
+
+.admin-table__num {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.admin-table .badge {
+  display: inline-block;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.admin-table__body {
+  max-width: 320px;
+}
+
+.admin-table__body summary {
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.admin-table__body p {
+  margin-top: 0.4rem;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.pager {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+/* Kerangka saat memuat halaman */
+
+.skeleton {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.skeleton__block {
+  height: 9rem;
+  background: var(--surface);
+  border: var(--border-width) dashed var(--border);
+  border-radius: var(--radius);
+  opacity: 0.7;
+}
+
+.skeleton__block--title {
+  height: 2.6rem;
+  width: min(22rem, 70%);
+  border-style: solid;
+  background: var(--bg);
+}
+
+.skeleton__block--short {
+  height: 5rem;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .skeleton__block {
+    animation: skeleton-pulse 1.2s ease-in-out infinite alternate;
+  }
+}
+
+@keyframes skeleton-pulse {
+  to {
+    opacity: 0.35;
+  }
+}
+
 /* Pengalih tampilan: hanya di layar sempit */
 
 .view-switch {
@@ -1501,8 +1666,8 @@ h3 {
     width: 100%;
   }
 
-  .animal-option {
-    padding: 0.5rem 0.6rem;
+  .animals__grid {
+    grid-template-columns: 1fr 1fr;
   }
 
   .trip-row {

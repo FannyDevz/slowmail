@@ -3,11 +3,11 @@
 Panduan untuk Claude Code saat bekerja di proyek ini.
 
 ## Tentang proyek
-Slow Mail adalah web surat yang diantar hewan (merpati, elang, kucing, kura-kura). Setiap pengguna punya profil dengan **@username** dan **alamat** (titik di peta, bisa dideteksi dari lokasi). Surat dikirim ke @username; kurir berangkat dari alamat pengirim ke alamat penerima. Waktu tiba = jarak dibagi kecepatan hewan, posisinya bisa dilacak di peta, dan isi surat baru bisa dibuka setelah kurir "mendarat".
+Slow Mail adalah web surat yang diantar kurir: 10 hewan (elang, merpati, angsa, burung hantu, lumba-lumba, kuda, unta, kucing, kura-kura, siput) atau pos biasa. Setiap pengguna punya profil dengan **@username** dan **alamat** (titik di peta, bisa dideteksi dari lokasi). Surat dikirim ke @username; kurir berangkat dari alamat pengirim ke alamat penerima. Waktu tiba = jarak dibagi kecepatan hewan, posisinya bisa dilacak di peta, dan isi surat baru bisa dibuka setelah kurir "mendarat".
 
 Nama produk: **Slow Mail** (konstanta `BRAND` di `lib/brand.js`, jangan ditulis langsung).
 
-Antarmuka **dua bahasa**: Indonesia (bawaan) dan Inggris. Semua teks yang dibaca pengguna ada di `lib/i18n.js`; jangan menulis teks langsung di komponen. Kalimat biasa (sentence case), kata kerja yang jelas ("Lepas kurir" / "Release courier", bukan "Submit").
+Antarmuka **bahasa Inggris saja** (diputuskan pemilik proyek supaya ringan). Semua teks yang dibaca pengguna ada di `lib/i18n.js`; jangan menulis teks langsung di komponen. Kalimat biasa (sentence case), kata kerja yang jelas ("Release courier", bukan "Submit").
 
 ## Perintah
 - `npm install` — pasang dependensi
@@ -29,18 +29,20 @@ Antarmuka **dua bahasa**: Indonesia (bawaan) dan Inggris. Semua teks yang dibaca
 - Geocoding: Nominatim (OpenStreetMap) dari browser, di `lib/geocode.js`. Maksimal 1 permintaan per detik, jadi hanya dipanggil atas aksi pengguna.
 - CSS biasa di `app/globals.css`, tanpa Tailwind
 - Font: DM Sans (500 isi, 700/800 judul) lewat `next/font/google`
-- i18n tanpa library: kamus di `lib/i18n.js`, bahasa dari cookie `lang` (atau `Accept-Language`), dibaca server di `lib/i18n-server.js`, diteruskan ke client lewat `components/I18nProvider.js` (`useI18n()` → `{ t, locale, intl }`)
+- Teks: satu kamus di `lib/i18n.js` dengan `t("kunci", params)`. Di server lewat `getT()` (`lib/i18n-server.js`), di client lewat `useI18n()` (`components/I18nProvider.js`). Tidak ada pemilihan bahasa.
 - Deploy: Vercel
 
 ## Struktur
 ```
-app/layout.js               layout, font, metadata, I18nProvider
+app/layout.js               layout, font, metadata
+app/(app)/                  route group halaman aplikasi yang sering dibuka, dengan loading.js (kerangka seketika saat pindah halaman)
 app/icon.svg, app/apple-icon.js  favicon dan ikon iOS
-app/page.js                 kotak surat (butuh login + profil): ambil pesan tanpa body, render Mailroom. `?to=username` mengisi penerima
+app/(app)/page.js           kotak surat (butuh login + profil): ambil pesan tanpa body, render Mailroom. `?to=username` mengisi penerima
 app/masuk/page.js           masuk / daftar
-app/profil/page.js          isi atau ubah username, nama, dan alamat
-app/pengaturan/page.js      notifikasi, ganti kata sandi/email, daftar blokir, hapus akun
-app/not-found.js            404 bergaya dan dua bahasa
+app/(app)/profil/page.js          isi atau ubah username, nama, dan alamat
+app/(app)/pengaturan/page.js      notifikasi, ganti kata sandi/email, daftar blokir, hapus akun
+app/not-found.js            404 bergaya
+app/voyager/page.js         halaman super admin: semua pengguna dan semua surat (404 untuk selain super admin)
 app/u/[username]/page.js    halaman publik pengguna (nama + nama daerah saja, tanpa koordinat)
 app/actions.js              server action: daftar, masuk, keluar, simpan profil, cari penerima, kirim, buka, hapus
 app/globals.css             semua style dan token warna
@@ -52,16 +54,18 @@ components/SettingsPanels.js  panel-panel halaman pengaturan
 components/ProfileForm.js   form profil + pemilih alamat (deteksi lokasi, cari, klik peta, pilih kota)
 components/LocationPicker.js  peta Leaflet untuk memilih titik alamat
 components/FlightMap.js     peta Leaflet rute perjalanan
-components/AuthForm.js, SiteHeader.js, SetupNotice.js, LanguageSwitch.js, I18nProvider.js
+components/AuthForm.js, SiteHeader.js, SetupNotice.js, I18nProvider.js
 lib/pigeon.js               hewan, rumus jarak, pembuatan perjalanan, format durasi, tripFromRow
 lib/geocode.js              deteksi lokasi browser + Nominatim (reverse dan pencarian)
-lib/i18n.js, lib/i18n-server.js  kamus dua bahasa dan pembaca bahasa di server
+lib/i18n.js, lib/i18n-server.js  kamus teks dan aksesnya di server
+lib/admin.js                cek peran super admin
+scripts/admin.mjs           `npm run admin -- grant|revoke <email>` atau `npm run admin -- list`
 lib/brand.js                nama produk
 lib/messages.js             kolom dan query daftar surat (halaman per 30)
 lib/map.js                  penyedia tile/geocoder (OSM bawaan, MapTiler jika NEXT_PUBLIC_MAPTILER_KEY diisi)
 lib/supabase/browser.js     klien browser, hanya untuk Realtime
 tests/                      node:test + PGlite
-lib/session.js              pengguna yang masuk + profilnya
+lib/session.js              getAuth() (identitas dari JWT, verifikasi lokal) dan getSession() (+ profil), keduanya di-cache per request
 lib/supabase/server.js      klien Supabase untuk pengguna (RLS) dan admin (service role)
 lib/config.js               flag kecepatan simulasi
 supabase/migrations/        skema, RLS, dan fungsi open_message
@@ -79,9 +83,12 @@ supabase/migrations/        skema, RLS, dan fungsi open_message
 - Jarak minimal 1 km (`MIN_DISTANCE_KM`), supaya surat ke tetangga atau diri sendiri tetap punya perjalanan.
 - Teks dari pengguna (nama daerah, nama) tidak boleh masuk ke Leaflet sebagai string HTML; pakai elemen dengan `textContent`.
 - Kejadian di perjalanan disimpan sebagai **kunci** (`events[].key`, mis. `rain`), teksnya diambil dari kamus `events.*`. Nama, kata kerja, dan catatan hewan juga di kamus (`animals.*`).
+- **Super admin**: ditandai `app_metadata.role = "superadmin"` (pengguna tidak bisa mengubah `app_metadata`). `/voyager` memeriksa peran di server lalu membaca data dengan service role; selain super admin mendapat 404. Isi surat di `/voyager` tersembunyi sampai diklik. Super admin saat ini: (super admin email).
 - Server action mengembalikan `{ error: "kunci", params }`, bukan kalimat; client menerjemahkan lewat `t("errors.<kunci>", params)`.
 - **Balasan**: `messages.reply_to` menunjuk ke surat asli. `sendMessage` memvalidasi bahwa surat asli sudah sampai, penerimanya adalah pengirim balasan, dan balasan dikirim ke pengirim asli.
 - Tidak ada nama kurir; hewan cukup disebut jenisnya.
+- Menambah kurir: tambahkan di `ANIMALS` (`lib/pigeon.js`, urutannya = urutan di form), teksnya di kamus (`animals.<id>` dan `events.<key>`), lalu migrasi baru untuk memperluas `messages_animal_check`. Tes `tests/rls.test.mjs` memastikan semua kurir di kode diterima database.
+- Saran penerima di form hanya dari kontak (`my_contacts()`: orang yang pernah berkirim surat dengan kita, tanpa yang diblokir). Tidak ada pencarian semua pengguna, supaya daftar pengguna tidak bisa ditelusuri; penerima baru diketik @username lengkap.
 - Waktu: render pertama memakai `serverNow` dari server, dan tanggal baru diformat setelah mount (zona waktu pengguna, server Vercel memakai UTC). Ini mencegah hydration mismatch.
 
 ## Penyimpanan
@@ -92,6 +99,15 @@ supabase/migrations/        skema, RLS, dan fungsi open_message
 - `public.mail_events`: baris kecil tanpa isi surat untuk Supabase Realtime (surat masuk baru). Jangan pernah menyiarkan tabel `messages` lewat Realtime. Pengirim dan penerima bisa melihat baris (tanpa `body`); hanya pengirim yang bisa menghapus.
 - Surat baru masuk lewat Realtime (`mail_events`) + polling cadangan tiap 60 detik; posisi hewan tetap dihitung di browser.
 - Notifikasi saat mendarat dijadwalkan di browser dari `arrive_at` (toast, atau notifikasi sistem jika tab tersembunyi dan izin diberikan). **Hanya selama aplikasi terbuka**; notifikasi saat aplikasi tertutup (email/Web Push) belum ada.
+
+## Performa (penting: database di Tokyo, setiap query sekitar 150 ms dari Indonesia)
+- Identitas di halaman, header, dan middleware memakai `auth.getClaims()` (JWT ES256 diverifikasi lokal, tanpa jaringan), bukan `getUser()`. `getUser()` hanya untuk server action yang mengubah data dan `/voyager`.
+- `getAuth()`/`getSession()` dibungkus React `cache()`: header dan halaman berbagi hasil yang sama dalam satu request. Jangan memanggil Supabase auth lagi di komponen.
+- Query yang tidak saling bergantung dijalankan dengan `Promise.all`.
+- `loading.js` hanya di `app/(app)/`. Halaman yang bisa memanggil `notFound()` (`/voyager`, `/u/[username]`) sengaja di luar, karena streaming membuat status HTTP-nya 200, bukan 404.
+- Klien Supabase di browser (Realtime, sekitar 70 kB) dimuat dengan `import()` setelah halaman tampil.
+- `vercel.json` menaruh fungsi Vercel di `hnd1` (Tokyo), dekat database. Jika region Supabase berubah, ubah juga ini.
+- Mode dev (`npm run dev`) selalu lebih lambat dari produksi karena mengompilasi halaman saat pertama dibuka.
 
 ## Gaya desain
 - **Neo-brutalisme**, mengikuti token neobrutalism.dev (palet biru): garis hitam 2px, bayangan keras `4px 4px 0` tanpa blur, radius 5px, warna datar.

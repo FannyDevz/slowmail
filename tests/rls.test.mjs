@@ -132,3 +132,47 @@ describe("izin tabel blocks", () => {
     assert.match(res, /permission denied/);
   });
 });
+
+describe("fungsi admin", () => {
+  test("admin_message_counts hanya untuk service role", async () => {
+    assert.match(await as(db, A, rows(`select * from public.admin_message_counts(array['${A}']::uuid[])`)), /permission denied/);
+    assert.match(await as(db, null, rows(`select * from public.admin_message_counts(array['${A}']::uuid[])`)), /permission denied/);
+    const [row] = await asService(db, `select sent::int, received::int from public.admin_message_counts(array['${A}']::uuid[])`);
+    assert.ok(row.sent >= 1);
+  });
+});
+
+describe("kontak", () => {
+  test("my_contacts hanya berisi orang yang pernah berkirim surat dengan kita", async () => {
+    const contacts = async (uid) => (await as(db, uid, rows("select username from public.my_contacts()"))).map((r) => r.username);
+    // A pernah mengirim ke B; C tidak pernah berkirim surat dengan siapa pun.
+    assert.deepEqual(await contacts(A), ["budi"]);
+    assert.deepEqual(await contacts(C), []);
+  });
+
+  test("pengguna yang diblokir tidak muncul sebagai kontak", async () => {
+    // Di tes sebelumnya B memblokir A.
+    const res = (await as(db, B, rows("select username from public.my_contacts()"))).map((r) => r.username);
+    assert.ok(!res.includes("ani"));
+  });
+
+  test("anon tidak bisa memanggil my_contacts", async () => {
+    assert.match(await as(db, null, rows("select * from public.my_contacts()")), /permission denied/);
+  });
+});
+
+describe("jenis kurir", () => {
+  const insert = (animal) =>
+    asService(db, `insert into public.messages
+      (sender_id, recipient_id, from_label, from_lat, from_lng, to_label, to_lat, to_lng, animal, body, arrive_at, distance_km)
+      values ('${A}', '${B}', 'a', 0, 0, 'b', 0, 0, '${animal}', 'x', now(), 1) returning animal`).catch((e) => `ERROR: ${e.message}`);
+
+  test("semua kurir di lib/pigeon.js diterima database", async () => {
+    const { ANIMALS } = await import("../lib/pigeon.js");
+    for (const id of Object.keys(ANIMALS)) assert.deepEqual(await insert(id), [{ animal: id }], id);
+  });
+
+  test("kurir yang tidak dikenal ditolak", async () => {
+    assert.match(await insert("naga"), /check constraint/);
+  });
+});

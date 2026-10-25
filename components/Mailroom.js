@@ -21,7 +21,7 @@ function mergeTrips(fresh, older) {
   return [...fresh, ...older.filter((t) => !seen.has(t.id))];
 }
 
-export default function Mailroom({ inbox: freshInbox, sent: freshSent, hasMore: initialHasMore, me, initialTo, serverNow, allowSimulation }) {
+export default function Mailroom({ inbox: freshInbox, sent: freshSent, hasMore: initialHasMore, contacts, me, initialTo, serverNow, allowSimulation }) {
   const { t } = useI18n();
   const router = useRouter();
   const [tab, setTab] = useState("inbox");
@@ -55,17 +55,6 @@ export default function Mailroom({ inbox: freshInbox, sent: freshSent, hasMore: 
   const isUnread = (trip) =>
     trip.recipientId === me.id && !trip.readAt && !readLocally.has(trip.id) && now >= trip.sentAt + trip.durMs;
   const unreadCount = inbox.filter(isUnread).length;
-
-  // Orang yang pernah berkirim surat denganmu, untuk saran penerima.
-  const contacts = useMemo(() => {
-    const map = new Map();
-    for (const trip of [...inbox, ...sent]) {
-      for (const [id, p] of [[trip.senderId, trip.sender], [trip.recipientId, trip.recipient]]) {
-        if (p && id !== me.id && !map.has(p.username)) map.set(p.username, { username: p.username, displayName: p.display_name });
-      }
-    }
-    return [...map.values()];
-  }, [inbox, sent, me.id]);
 
   useEffect(() => {
     document.title = unreadCount ? `(${unreadCount}) ${BRAND}` : BRAND;
