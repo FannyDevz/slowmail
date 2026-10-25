@@ -1,0 +1,21 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test-and-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      # Tes logika perjalanan, kamus dua bahasa, dan RLS (Postgres di memori lewat PGlite).
+      - run: npm test
+      # Build tanpa kunci Supabase: halaman menampilkan petunjuk pengaturan, tapi kode tetap dikompilasi.
+      - run: npm run build

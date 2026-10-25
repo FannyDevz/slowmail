@@ -4,3 +4,4 @@ out/
 .vercel/
 .env*.local
 .DS_Store
+.next-build/

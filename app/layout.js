@@ -1,18 +1,29 @@
-import { Figtree, Young_Serif } from "next/font/google";
+import { DM_Sans } from "next/font/google";
+import { I18nProvider } from "@/components/I18nProvider";
+import { BRAND } from "@/lib/brand";
+import { getT } from "@/lib/i18n-server";
 import "./globals.css";
 
-const youngSerif = Young_Serif({ subsets: ["latin"], weight: "400", variable: "--font-serif" });
-const figtree = Figtree({ subsets: ["latin"], variable: "--font-sans" });
+const dmSans = DM_Sans({ subsets: ["latin"], weight: ["500", "700", "800"], variable: "--font-dm-sans" });
 
-export const metadata = {
-  title: "Merpati Mail",
-  description: "Email yang diantar merpati, elang, kucing, atau kura-kura. Pesan baru bisa dibuka setelah kurirnya mendarat.",
+export async function generateMetadata() {
+  const { t } = await getT();
+  return { title: BRAND, description: t("meta.description") };
+}
+
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  themeColor: "#5294ff",
 };
 
-export default function RootLayout({ children }) {
+export default async function RootLayout({ children }) {
+  const { locale } = await getT();
   return (
-    <html lang="id" className={`${youngSerif.variable} ${figtree.variable}`}>
-      <body>{children}</body>
+    <html lang={locale} className={dmSans.variable}>
+      <body>
+        <I18nProvider locale={locale}>{children}</I18nProvider>
+      </body>
     </html>
   );
 }

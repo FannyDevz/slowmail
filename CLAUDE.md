@@ -3,30 +3,68 @@
 Panduan untuk Claude Code saat bekerja di proyek ini.
 
 ## Tentang proyek
-Merpati Mail adalah web email yang dikirim oleh hewan (merpati, elang, kucing, kura-kura). Pesan baru bisa dibuka penerima setelah hewan kurirnya "mendarat". Waktu tiba dihitung dari jarak kota dibagi kecepatan hewan, dan posisinya bisa dilacak di peta.
+Slow Mail adalah web surat yang diantar hewan (merpati, elang, kucing, kura-kura). Setiap pengguna punya profil dengan **@username** dan **alamat** (titik di peta, bisa dideteksi dari lokasi). Surat dikirim ke @username; kurir berangkat dari alamat pengirim ke alamat penerima. Waktu tiba = jarak dibagi kecepatan hewan, posisinya bisa dilacak di peta, dan isi surat baru bisa dibuka setelah kurir "mendarat".
 
-Bahasa antarmuka dan salinan teks: **Bahasa Indonesia**, kalimat biasa (sentence case), kata kerja yang jelas ("Lepas kurir", bukan "Submit").
+Nama produk: **Slow Mail** (konstanta `BRAND` di `lib/brand.js`, jangan ditulis langsung).
+
+Antarmuka **dua bahasa**: Indonesia (bawaan) dan Inggris. Semua teks yang dibaca pengguna ada di `lib/i18n.js`; jangan menulis teks langsung di komponen. Kalimat biasa (sentence case), kata kerja yang jelas ("Lepas kurir" / "Release courier", bukan "Submit").
 
 ## Perintah
 - `npm install` — pasang dependensi
 - `npm run dev` — jalankan di http://localhost:3000
-- `npm run build` — build produksi (dipakai Vercel)
-- Di form, pilih kecepatan simulasi "3.600x" untuk menguji perjalanan dalam hitungan detik.
+- `npm test` — tes logika perjalanan, kamus, dan RLS (Postgres di memori lewat PGlite, tanpa Supabase). Jalan juga di CI (`.github/workflows/ci.yml`).
+- `npm run build` — build produksi (dipakai Vercel). Jika dev server sedang jalan, pakai `NEXT_DIST_DIR=.next-build npm run build` supaya tidak menimpa `.next`.
+- Di form, pilih kecepatan simulasi "3.600x" untuk menguji perjalanan dalam hitungan detik. Pilihan ini hanya muncul saat dev, atau di produksi jika `ALLOW_SIMULATION=true`.
+
+## Menyiapkan Supabase
+- Proyek: SlowMail (`<project-ref>`), sudah di-link lewat Supabase CLI (`npx supabase@2.122.0`).
+- Migrasi baru: tambah file di `supabase/migrations/`, lalu `npx supabase@2.122.0 db push --linked` (butuh password database, berikan lewat `SUPABASE_DB_PASSWORD`, jangan disimpan di file).
+- Kunci di `.env.local` (lihat `.env.example`): URL, publishable/anon key, dan secret key (`sb_secret_…`) untuk server. Isi yang sama di Environment Variables Vercel.
+- Akun dibuat dengan email + kata sandi **tanpa verifikasi email**: `signUp` di `app/actions.js` memakai admin API dengan `email_confirm: true`. Karena email tidak diverifikasi, jangan pernah memakai email untuk otorisasi; selalu pakai `auth.uid()` / id profil.
 
 ## Stack
 - Next.js 15 (App Router), React 19, JavaScript (bukan TypeScript)
 - Leaflet untuk peta (tile OpenStreetMap), tanpa react-leaflet
+- Supabase (Postgres + Auth email/kata sandi) lewat `@supabase/ssr` dan `@supabase/supabase-js`
+- Geocoding: Nominatim (OpenStreetMap) dari browser, di `lib/geocode.js`. Maksimal 1 permintaan per detik, jadi hanya dipanggil atas aksi pengguna.
 - CSS biasa di `app/globals.css`, tanpa Tailwind
-- Font: Young Serif (judul) dan Figtree (isi) lewat `next/font/google`
+- Font: DM Sans (500 isi, 700/800 judul) lewat `next/font/google`
+- i18n tanpa library: kamus di `lib/i18n.js`, bahasa dari cookie `lang` (atau `Accept-Language`), dibaca server di `lib/i18n-server.js`, diteruskan ke client lewat `components/I18nProvider.js` (`useI18n()` → `{ t, locale, intl }`)
 - Deploy: Vercel
 
 ## Struktur
 ```
-app/layout.js         layout, font, metadata
-app/page.js           halaman utama: form kirim, daftar perjalanan, detail tracking (client component)
-app/globals.css       semua style dan token warna
-components/FlightMap.js   peta Leaflet (dimuat dengan dynamic import, ssr: false)
-lib/pigeon.js         kota, hewan, rumus jarak, pembuatan perjalanan, format durasi
+app/layout.js               layout, font, metadata, I18nProvider
+app/icon.svg, app/apple-icon.js  favicon dan ikon iOS
+app/page.js                 kotak surat (butuh login + profil): ambil pesan tanpa body, render Mailroom. `?to=username` mengisi penerima
+app/masuk/page.js           masuk / daftar
+app/profil/page.js          isi atau ubah username, nama, dan alamat
+app/pengaturan/page.js      notifikasi, ganti kata sandi/email, daftar blokir, hapus akun
+app/not-found.js            404 bergaya dan dua bahasa
+app/u/[username]/page.js    halaman publik pengguna (nama + nama daerah saja, tanpa koordinat)
+app/actions.js              server action: daftar, masuk, keluar, simpan profil, cari penerima, kirim, buka, hapus
+app/globals.css             semua style dan token warna
+middleware.js               memperbarui cookie sesi Supabase
+components/Mailroom.js      kotak surat: tab, belum dibaca, muat lebih banyak, balasan, pengalih HP
+components/mail/            SendForm, RecipientInput (saran @username), TripRow, TripDetail (percakapan, blokir, laporkan),
+                            Toasts, useMailNotifications (notifikasi + Realtime), shared
+components/SettingsPanels.js  panel-panel halaman pengaturan
+components/ProfileForm.js   form profil + pemilih alamat (deteksi lokasi, cari, klik peta, pilih kota)
+components/LocationPicker.js  peta Leaflet untuk memilih titik alamat
+components/FlightMap.js     peta Leaflet rute perjalanan
+components/AuthForm.js, SiteHeader.js, SetupNotice.js, LanguageSwitch.js, I18nProvider.js
+lib/pigeon.js               hewan, rumus jarak, pembuatan perjalanan, format durasi, tripFromRow
+lib/geocode.js              deteksi lokasi browser + Nominatim (reverse dan pencarian)
+lib/i18n.js, lib/i18n-server.js  kamus dua bahasa dan pembaca bahasa di server
+lib/brand.js                nama produk
+lib/messages.js             kolom dan query daftar surat (halaman per 30)
+lib/map.js                  penyedia tile/geocoder (OSM bawaan, MapTiler jika NEXT_PUBLIC_MAPTILER_KEY diisi)
+lib/supabase/browser.js     klien browser, hanya untuk Realtime
+tests/                      node:test + PGlite
+lib/session.js              pengguna yang masuk + profilnya
+lib/supabase/server.js      klien Supabase untuk pengguna (RLS) dan admin (service role)
+lib/config.js               flag kecepatan simulasi
+supabase/migrations/        skema, RLS, dan fungsi open_message
 ```
 
 ## Cara kerja inti (jangan diubah tanpa alasan)
@@ -34,15 +72,34 @@ lib/pigeon.js         kota, hewan, rumus jarak, pembuatan perjalanan, format dur
   `progress = (sekarang - sentAt) / durMs`, lalu diinterpolasi di garis lurus asal ke tujuan.
 - `makeTrip()` di `lib/pigeon.js` menentukan kejadian acak **sekali saat pesan dikirim** (seed dari waktu kirim) dan menambah durasi total. Jangan mengacak ulang saat render.
 - `durMs` sudah dibagi `speedup`, jadi simulasi cepat tidak perlu logika khusus di tempat lain.
-- Isi pesan hanya ditampilkan jika `progress >= 1`. Saat backend ditambahkan, pengecekan ini harus dilakukan **di server**, bukan hanya di UI.
+- Isi pesan hanya keluar dari database lewat fungsi `open_message(id)`, yang mengecek `now() >= arrive_at` dan kepemilikan. Klien tidak punya hak `select` pada kolom `body`, jadi jangan pakai `select('*')`.
+- Pesan dibuat **hanya di server** (`sendMessage` di `app/actions.js`, memakai service role). `makeTrip()` dijalankan dengan jam server, sehingga `arrive_at` dan `events` tidak bisa diatur dari browser. Tidak ada policy insert/update untuk pengguna.
+- Alamat pengirim dan penerima **disalin ke pesan saat kirim**, jadi rute tidak berubah jika seseorang pindah alamat.
+- Koordinat alamat dibulatkan 2 desimal (sekitar 1 km) sebelum disimpan. Halaman publik hanya menampilkan nama daerah.
+- Jarak minimal 1 km (`MIN_DISTANCE_KM`), supaya surat ke tetangga atau diri sendiri tetap punya perjalanan.
+- Teks dari pengguna (nama daerah, nama) tidak boleh masuk ke Leaflet sebagai string HTML; pakai elemen dengan `textContent`.
+- Kejadian di perjalanan disimpan sebagai **kunci** (`events[].key`, mis. `rain`), teksnya diambil dari kamus `events.*`. Nama, kata kerja, dan catatan hewan juga di kamus (`animals.*`).
+- Server action mengembalikan `{ error: "kunci", params }`, bukan kalimat; client menerjemahkan lewat `t("errors.<kunci>", params)`.
+- **Balasan**: `messages.reply_to` menunjuk ke surat asli. `sendMessage` memvalidasi bahwa surat asli sudah sampai, penerimanya adalah pengirim balasan, dan balasan dikirim ke pengirim asli.
+- Tidak ada nama kurir; hewan cukup disebut jenisnya.
+- Waktu: render pertama memakai `serverNow` dari server, dan tanggal baru diformat setelah mount (zona waktu pengguna, server Vercel memakai UTC). Ini mencegah hydration mismatch.
 
-## Penyimpanan saat ini
-Pesan disimpan di `localStorage` dengan key `merpati-mail:v1`. Ini hanya untuk MVP, jadi pesan hanya terlihat di browser yang sama. Bungkus akses `localStorage` dengan try/catch.
+## Penyimpanan
+- `public.profiles`: satu baris per pengguna (`username` unik, `display_name`, `address_label`, `lat`, `lng`). Semua pengguna yang masuk bisa membaca; hanya pemilik yang bisa membuat/mengubah.
+- `public.messages`: `sender_id` dan `recipient_id` mengacu ke `profiles`, `reply_to` ke surat yang dibalas. `read_at` diisi `open_message()` saat penerima membuka surat.
+- `public.blocks`: blokir berlaku dua arah saat mengirim (dicek di `sendMessage`), dan surat dari yang diblokir disaring dari kotak masuk. Tidak ada izin UPDATE, jadi pakai `insert`, bukan `upsert`.
+- `public.reports`: pengguna hanya bisa membuat; ditinjau lewat dashboard Supabase.
+- `public.mail_events`: baris kecil tanpa isi surat untuk Supabase Realtime (surat masuk baru). Jangan pernah menyiarkan tabel `messages` lewat Realtime. Pengirim dan penerima bisa melihat baris (tanpa `body`); hanya pengirim yang bisa menghapus.
+- Surat baru masuk lewat Realtime (`mail_events`) + polling cadangan tiap 60 detik; posisi hewan tetap dihitung di browser.
+- Notifikasi saat mendarat dijadwalkan di browser dari `arrive_at` (toast, atau notifikasi sistem jika tab tersembunyi dan izin diberikan). **Hanya selama aplikasi terbuka**; notifikasi saat aplikasi tertutup (email/Web Push) belum ada.
 
 ## Gaya desain
-- Tema surat pos udara: garis diagonal merah-putih-biru di sekeliling form (`.envelope`) adalah satu elemen yang menonjol. Elemen lain dibuat tenang.
-- Token warna ada di `:root`: `--paper`, `--ink`, `--blue`, `--red`, `--mute`, `--line`. Pakai token, jangan hardcode hex baru.
-- Hindari kartu seragam berlebihan, label huruf kapital, dan animasi masuk di setiap bagian. Gerak hanya untuk hal yang berubah (bar progres, posisi hewan).
+- **Neo-brutalisme**, mengikuti token neobrutalism.dev (palet biru): garis hitam 2px, bayangan keras `4px 4px 0` tanpa blur, radius 5px, warna datar.
+- Token di `:root`: `--bg`, `--surface`, `--fg`, `--mute`, `--main`, `--border`, `--red`, `--yellow`, `--green`, `--radius`, `--border-width`, `--shadow`. Pakai token, jangan hardcode hex baru.
+- Tombol: saat hover bergeser sejauh bayangan dan bayangannya hilang (efek "ditekan"). Jangan tambah gradien, blur, atau bayangan lembut.
+- Jejak tema pos udara tinggal satu: pita diagonal merah-putih-biru di atas kartu tulis surat (`.airmail`).
+- Mobile: di bawah 920px hanya satu panel tampil (pengalih "Surat / Tulis" yang menempel di atas). Efek hover hanya untuk `@media (hover: hover)`; di layar sentuh peta rute tidak bisa digeser satu jari supaya halaman tetap bisa digulir.
+- Hindari label huruf kapital dan animasi masuk di setiap bagian. Gerak hanya untuk hal yang berubah (bar progres, posisi hewan, efek tekan tombol).
 - Harus tetap nyaman di layar HP, punya fokus keyboard yang terlihat, dan menghormati `prefers-reduced-motion`.
 
 ## Aturan kode
@@ -52,10 +109,15 @@ Pesan disimpan di `localStorage` dengan key `merpati-mail:v1`. Ini hanya untuk M
 - Tanda kutip di teks yang dibaca pengguna memakai tipografi yang benar (’ “ ”), kecuali di dalam kode.
 
 ## Rencana berikutnya (urutan prioritas)
-1. **Supabase**: auth dan tabel `messages` (`sender_id`, `recipient_email`, `from_city`, `to_city`, `animal`, `pet_name`, `body`, `sent_at`, `arrive_at`, `events` jsonb). Gunakan Row Level Security.
-2. **Inbox penerima**: penerima melihat pesan miliknya. Endpoint server hanya mengembalikan `body` jika `now() >= arrive_at`.
-3. **Notifikasi saat mendarat**: Resend untuk email, pemicu dari `pg_cron` atau Supabase Edge Function.
+1. ~~Supabase: auth dan tabel `messages` dengan RLS~~ (selesai)
+2. ~~Inbox penerima, `body` hanya setelah `arrive_at`~~ (selesai)
+2b. ~~Profil, @username, alamat dengan deteksi lokasi, halaman publik `/u/[username]`~~ (selesai)
+2c. ~~Balasan, dua bahasa, favicon, tampilan mobile~~ (selesai)
+2d. ~~Belum dibaca, blokir/laporkan, saran penerima, pengaturan akun, 404, percakapan, peta yang bisa diganti, tes + CI, Realtime + paginasi~~ (selesai)
+3. **Notifikasi saat aplikasi tertutup**: email lewat Resend atau Web Push, pemicu dari `pg_cron` (cari surat yang `arrive_at <= now()` dan belum dikabari).
+3b. **Sebelum rilis publik**: captcha saat daftar, lupa kata sandi (butuh SMTP), reset password database.
 4. **Fitur tambahan**: statistik per hewan (jumlah kiriman, total km), kirim dengan dua hewan sekaligus, mode "kirim ke masa depan", kartu rute yang bisa dibagikan.
 
 ## Hal yang perlu diputuskan pemilik proyek
-- Sistem pesan internal (sesama pengguna) atau benar-benar email ke Gmail/Outlook. Saat ini diasumsikan **internal**, karena menunda SMTP jauh lebih rumit (spam, keandalan).
+- Sudah diputuskan: sistem pesan **internal**, alamat penerima berupa @username.
+- Pendaftaran tanpa verifikasi email berarti siapa pun bisa membuat banyak akun. Pertimbangkan captcha (Supabase mendukung hCaptcha/Turnstile) atau batas pendaftaran per IP sebelum dibuka ke publik.

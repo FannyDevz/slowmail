@@ -1,16 +1,25 @@
 {
-  "name": "merpati-mail",
+  "name": "slow-mail",
   "version": "0.1.0",
   "private": true,
   "scripts": {
     "dev": "next dev -p 3000",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "test": "node --test \"tests/*.test.mjs\""
   },
   "dependencies": {
+    "@supabase/ssr": "^0.12.7",
+    "@supabase/supabase-js": "^2.118.0",
     "leaflet": "^1.9.4",
     "next": "^15.5.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.3.16"
+  },
+  "engines": {
+    "node": ">=22"
   }
 }
